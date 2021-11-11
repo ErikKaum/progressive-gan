@@ -1,0 +1,7 @@
+# stuff related to saved models
+critic.pth
+generator.pth
+/logs
+
+# other
+.DS_Store
