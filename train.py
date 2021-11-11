@@ -1,5 +1,3 @@
-""" Training of ProGAN using WGAN-GP loss"""
-
 import torch
 import torch.optim as optim
 import torchvision.datasets as datasets
@@ -52,8 +50,6 @@ def train_fn(critic,gen,loader,dataset,step,alpha,opt_critic,opt_gen,tensorboard
         real = real.to(config.DEVICE)
         cur_batch_size = real.shape[0]
 
-        # Train Critic: max E[critic(real)] - E[critic(fake)] <-> min -E[critic(real)] + E[critic(fake)]
-        # which is equivalent to minimizing the negative of the expression
         noise = torch.randn(cur_batch_size, config.Z_DIM, 1, 1).to(config.DEVICE)
 
         with torch.cuda.amp.autocast():
@@ -72,7 +68,6 @@ def train_fn(critic,gen,loader,dataset,step,alpha,opt_critic,opt_gen,tensorboard
         scaler_critic.step(opt_critic)
         scaler_critic.update()
 
-        # Train Generator: max E[critic(gen_fake)] <-> min -E[critic(gen_fake)]
         with torch.cuda.amp.autocast():
             gen_fake = critic(fake, alpha, step)
             loss_gen = -torch.mean(gen_fake)
@@ -108,13 +103,9 @@ def train_fn(critic,gen,loader,dataset,step,alpha,opt_critic,opt_gen,tensorboard
 
 
 def main():
-    # initialize gen and disc, note: discriminator should be called critic,
-    # according to WGAN paper (since it no longer outputs between [0, 1])
-    # but really who cares..
     gen = Generator(config.Z_DIM, config.IN_CHANNELS, img_channels=config.CHANNELS_IMG).to(config.DEVICE)
     critic = Discriminator(config.Z_DIM, config.IN_CHANNELS, img_channels=config.CHANNELS_IMG).to(config.DEVICE)
 
-    # initialize optimizers and scalers for FP16 training
     opt_gen = optim.Adam(gen.parameters(), lr=config.LEARNING_RATE, betas=(0.0, 0.99))
     opt_critic = optim.Adam(critic.parameters(), lr=config.LEARNING_RATE, betas=(0.0, 0.99))
     scaler_critic = torch.cuda.amp.GradScaler()
@@ -136,7 +127,7 @@ def main():
     
     for num_epochs in config.PROGRESSIVE_EPOCHS[step:]:
         alpha = 1e-5  # start with very low alpha
-        loader, dataset = get_loader(4 * 2 ** step)  # 4->0, 8->1, 16->2, 32->3, 64 -> 4
+        loader, dataset = get_loader(4 * 2 ** step)
         print(f"Current image size: {4 * 2 ** step}")
 
         for epoch in range(num_epochs):
@@ -147,7 +138,7 @@ def main():
                 save_checkpoint(gen, opt_gen, filename=config.CHECKPOINT_GEN)
                 save_checkpoint(critic, opt_critic, filename=config.CHECKPOINT_CRITIC)
 
-        step += 1  # progress to the next img size
+        step += 1 
 
 
 if __name__ == "__main__":

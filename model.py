@@ -1,37 +1,12 @@
-"""
-Implementation of ProGAN generator and discriminator with the key
-attributions from the paper. We have tried to make the implementation
-compact but a goal is also to keep it readable and understandable.
-Specifically the key points implemented are:
-1) Progressive growing (of model and layers)
-2) Minibatch std on Discriminator
-3) Normalization with PixelNorm
-4) Equalized Learning Rate (here I cheated and only did it on Conv layers)
-"""
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from math import log2
 
-"""
-Factors is used in Discrmininator and Generator for how much
-the channels should be multiplied and expanded for each layer,
-so specifically the first 5 layers the channels stay the same,
-whereas when we increase the img_size (towards the later layers)
-we decrease the number of chanels by 1/2, 1/4, etc.
-"""
 factors = [1, 1, 1, 1, 1 / 2, 1 / 4, 1 / 8, 1 / 16, 1 / 32, 1/ 64]
 
 
 class WSConv2d(nn.Module):
-    """
-    Weight scaled Conv2d (Equalized Learning Rate)
-    Note that input is multiplied rather than changing weights
-    this will have the same result.
-    Inspired and looked at:
-    https://github.com/nvnbny/progressive_growing_of_gans/blob/master/modelUtils.py
-    """
 
     def __init__(
         self, in_channels, out_channels, kernel_size=3, stride=1, padding=1, gain=2
